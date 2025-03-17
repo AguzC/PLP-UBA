@@ -1,0 +1,294 @@
+Bajarlo(windows):
+1. busca chocolatey en google, bajate la version individual
+2. En una terminal como admin pega "choco install ghc -y"
+3. Reinicia para asegurar y despues confirma que funco poniendo
+ghci.
+
+Ejecutar programas:
+1. Abri una terminal y metete a la carpeta con el/los archivos que queres 
+ejecutar y escribi ghci.
+2. Escribir en la terminal ":l nombreArchivo.hs"; en casos donde 
+vayas modificando las funciones y quieras recargar el programa, podes 
+escribir de nuevo el mismo texto y lo recarga o escribir ":r" que recarga
+el archivo actual.
+3. Ahora el archivo esta cargado y podes poner el nombre de la funcion que 
+quieras con sus respectivos argumentos, le das enter y se ejecuta.
+
+
+Operaciones basicas:
++, *, -, / (division normal), && (and), || (or) y not (negacion)
+== (igualdad), /= (desigualdad)
+succ x (siguiente de x, x+1), min x y (devuelve el min entre x e y, y funca igual con max)
+
+Cualquier funcion de 2 parametros tiene forma prefija e infija, la prefija es la forma 
+normal de poner el nombre de la funcion adelante y los argumentos despues separados por 
+espacios:
+div 14 22 --> Forma prefija
+y sino, la infija es usando ``
+14 `div` 22 --> En este caso es mas entendible leer 14 dividido 22
+Extra: Hay inferencia de tipos
+
+Funciones:
+En IP aclarabamos al principio de la funcion los tipos de datos de entradas y el tipo
+de salida, junto con la clase de tipo (las clases siendo distintas a la de POO), ahora 
+vamos a seguir haciendo lo mismo porq los apuntes de PLP lo hacen.
+**Tambien las funcioens empiezan en minusculas.
+
+sumaTriple :: Integer -> Integer -> Integer -> Integer -> Integer
+doubleMe x y z = x + y + z
+
+De la misma forma que se llaman, primero va el nombre seguido de los 
+parametros que va a tener, ahora viene el =, que define la funcion, 
+lo que pasa despues del = es lo que va a realizar la funcion.
+
+Pattern Matching: 
+foo x [] = loQueFuere --> Esto se evalua si le meten una lista vacia
+foo 0 _  = loQueFuere2 --> Esto se evalua si le meten un 0 como primer param 
+foo x (x:xs) = loQueFuere3 --> Esto se evalua si le meten una lista con al menos 1 elem.
+
+Casos logicos:
+foo x y | x < y = loQueFuere --> Si es verdadero se ejecuta
+        | x == y = loQueFuere2 --> Si es verdadero y el anterior no se ejecuto
+        | otherwise = loQueFuere3 --> Si no se ejecuto ninguna de los anteriores.
+
+
+IfThenElse: 
+
+doubleSmallNumber x = if x > 100
+                        then x
+                        else x*2 --> El else es obligatorio en haskell.
+o Tambien
+
+doubleSmallNumber' x = (if x > 100 then x else x*2) + 1
+
+Variables o algo parecido: 
+Se usa let nombre = lo que fuere y podes hacerlas en la terminal, no parece 
+posible hacerlas en el cuerpo del codigo, asi podes escribir las cosas una 
+vez y despues seguir usando eso(???.
+let listita = [4,124,65,23,32154]
+
+-----Tipos y clases de tipo:
+Haskell tiene un sistema de tipo estatico, en tiempo de compilacion se conoce el 
+tipo de cada expresion, no hay tu tia.
+**Podes examinar el tipo de los datos o funciones con ":t", super util, para los 
+operadores se requiere que esten entre parentesis, ej: :t (:)
+Tenemos como tipos basicos: 
+Int, Integer (Int no acotado pero mas lento), Float, Double, Bool, Char.
+Las tuplas son tipos infinitos por su lado porq existen tantas tuplas como
+combinaciones de tipos basicos en longitud y forma.
+
+-Variable de tipo: Son variables genericas que nos permiten definir funciones 
+genericas siempre que no se haga uso de un tipo especifico en cuestion. Las 
+funciones con variables de tipo son funciones polimorificas, head es del 
+tipo ::[a] -> a, toma una lista de variables de cualquier tipo y devuelve 
+el primer elemento del tipo qeu sea la lista.
+
+-Clases de tipo: Son una interfaz que define algun comportamiento, si un tipo 
+es miembro de esta clase, significa que soporta y tiene el comportamiento de esta, 
+son como las interfaces de java, que si un objeto aplica una interfaz, si o si tiene 
+que tener definido las funciones de esta interfaz.
+Para poner una restriccion de clase en una funcion se usa el "=>"
+
+esMasGrande :: (Eq a) => a -> a -> Bool, esta funcion dice que toma 2 parametros 
+del mismo tipo que sean miembros de la clase Eq y devuelve un bool, Eq significa 
+Equal, asiq tienen que ser tipos comparables, como son numeros o strings, etc.
+
+-Eq: Cualquier miembro de la clase Eq tiene definido un comportamiento de comparacion, 
+asiq tienen que tener definidas las operaciones == y /=.
+
+-Ord: Los tipos que poseen un orden, tienen definidos <,>,>=,<=.por ej: Numeros, Char.
+la funcion compare toma 2 miembros de la clase Ord del mismo tipo y devuelve su orden.
+El orden se representa por el tipo Ordering que puede ser GT, EQ o LT.
+ghci> 5 `compare` 3
+GT
+
+-Show Son todos los tipos que pueden ser printeados como strings, todos los tipos basicos 
+funcan, las funciones no. La funcion mas cheta que usa esta clase es "show" que representa 
+el argumento como string.
+ghci> show 123121
+"123121"
+
+-Read: es como la clase de tipos opuesta a Show. La función read toma una cadena y devuelve
+un valor del tipo que es miembro de Read.
+read "True" || False
+True 
+read tiene el problema de que si solo ponemos por ej: read "5", no sabe que tipo queremos que 
+devuelva, no puede inferir. Para eso podemos usar anotaciones de tipo explicitas, indica que tipo 
+de dato debe tener una expresion.
+read "5" :: Float
+5.0
+
+-Enum: son tipos secuencialmente ordenados, es decir, pueden ser enumerados. 
+La principal ventaja de la clase de tipos Enum es que podemos usar los miembros en las listas aritméticas. 
+También tienen definidos los sucesores y predecesores, por lo que podemos usar las funciones succ y pred.
+Los tipos de esta clase son: (), Bool, Char, Ordering, Int, Integer, Float y Double.
+(Ordering solo tiene 3 valores posibles: LT,EQ,GT)
+
+-Bounded: Conjuntos acotados, tiene las funciones minBound y maxBound, que tienen el tipo (Bounded a) => a,
+son constantes polimorificas.
+
+Num: es la clase de tipos numéricos. Sus miembros tienen la propiedad de poder comportarse como números.
+Tienen numeros reales.
+
+-Integral: Solo son numeros enteros, Int y Integer.
+
+-Floating: incluye únicamente números en coma flotante, es decir Float y Double.
+
+Funcion util: fromIntegral, te permite castear de Integral a Num, tiene el tipo 
+fromIntegral :: (Num b, Integral a) => a -> b
+
+
+
+
+
+
+-----Listas:
+-Tienen que ser unicamente de elementos del mismo tipo, un string 
+es una lista de caracteres, "hola" = ['h','o','l','a'], y se pueden acceder 
+a los elementos de un string con el x:xs
+Cuando a un elemento de una lista lo llamamos "_" significa que no lo vmaos a 
+usar, ej: lenght _:xs 
+
+-cons operator: Medio confuso lo tengo, pero hay 2 casos:
+
+Cuando es usado despues del nombre de la funcion, se usa para referirse 
+a los n elementos que quieras del principio de una lista, siendo n la cantidad 
+de veces que pusiste el cons, ej:
+sumarN numero (x:xs) --> Aca solo esta 1 vez el operador, y xs es una lista, 
+entonces x es el primer elemento de una lista con al menos un elemento, este 
+caso solo no contempla la lista vacia. [1,2,3] es una alternativa sintáctica de 1:2:3:[]
+
+Cuando es usado como definicion de una funcion, apendea el elemento a la primera 
+posicion de la lista, es instantaneo, es lista enlazada.
+
+-Esta el concatenar listas con ++, [a]->[a]:
+Para concatenar pasa por la primera lista y despues 
+por la segunda, asiq es medio choto.
+
+[1,2,3,4] ++ [9,10,11,12] =
+[1,2,3,4,9,10,11,12] --> 2 listas de numeros dan la lista asi.
+
+"hello" ++ " " ++ "world"
+"hello world" --> 3 strings dan un solo string asi.
+
+['w','o'] ++ ['o','t']
+"woot" --> 2 listas de caracteres te da el string asi.
+
+Elemento por indice: [lista] -> Integer -> elementoLista
+"Steve Buscemi" !! 6
+'B'
+
+-Tambien se pueden comparar listas si tienen elementos comparables, 
+usando <, <=, >, >= se comparan en orden lexicografico elemento a elemento,
+se hace elemento a elemento la operacion, devolviendo el resultado de esa misma 
+para todo, probalo pa verlo bien.
+
+-Otras boludeces: 
+head lista --> Primer elem de la lista
+last lista --> Ultimo elem de la lista
+init lista --> Lista sin ultimo elem
+tail lista --> Lista sin primer elem
+lenght lista --> Longitud
+null lista --> comprueba si esta vacia
+reverse lista --> La da vuelta
+take num lista --> Devuelve la lista con la cantidad de 
+elementos num, si tenes una lista con 10 elementos y 
+pones num = 3, entonces te devuelve la lista con los 
+primeros 3 elementos.
+drop num lista --> Como take pero empieza desde el fondo, 
+toma los ultimos num numeros.
+maximum lista devuelve el elemento mas grande
+minimun lista el mas peque
+sum lista --> es la sumatoria de la lista
+product lista --> es la productoria de la lista
+elem num lista --> Se fija si num pertenece. 
+
+-----Rangos:
+Forma de escribir listas con patrones inferibles sin tener que 
+escribir todo:
+[1..20] = a la lista del 1 al 20, tiene los 20 elementos dentro.
+
+['a'..'z']
+"abcdefghijklmnopqrstuvwxyz"
+
+['K'..'Z']
+"KLMNOPQRSTUVWXYZ"
+
+[2,4..20]
+[2,4,6,8,10,12,14,16,18,20]
+
+[13,26..24*13]
+
+Se puede usar para hacer listas infinitas, IMPORTANTE: USA UNA LISTA INFINITA SOLO 
+SI NO SE EVALUA TODA, SINO EXPLOTA:
+
+[13,26..] --> Si escribis esto en la terminal, se va a ejecutar infinitamente, ahora, si 
+solo queres los primeros 24 multiplos de 13, entonces podes hacer take 24 [13,26..] y 
+te da la lista con esos primeros 24.
+
+algunas boludeces con infinitas: 
+
+ghci>take 10 (cycle [1,2,3]) --> Cycle crea una lista infinita con la lista encajada
+[1,2,3,1,2,3,1,2,3,1] --> Con el take sacamos la lista repetida solo con 10 elems.
+
+ghci> take 12 (cycle "LOL ")
+"LOL LOL LOL "
+
+ghci> take 10 (repeat 5) --> Repeat es un cycle con un solo elemento
+[5,5,5,5,5,5,5,5,5,5] 
+
+-----Listas intesionales:
+En principio podes definir una lista como "Todos los numeros que cumplan tal cosa",
+digamos que queres el doble de los primeros 10 numeros naturales, para imprimirlo 
+como lista se puede hacer asi:
+
+[x*2 | x <- [1..10]] --> x se extrae de [1..10] y a cada elemento ligado a x se 
+le aplica el calculo de la izquierda. Esto imprime: 
+[2,4,6,8,10,12,14,16,18,20] 
+
+A esto se le puede meter condiciones, despues de donde enlazamos la variable, separamos
+con coma y ponemos la condicion que queremos que se cumpla para meter al elemento en la lista:
+
+[x*x*x |x <- [1..100], x < 10, x > 5 ] --> Con x siendo los primeros 100 naturales, si x < 10 
+y al mismo tiempo x > 5, entonces agrega a la lista x*x*x:
+[216,343,512,729] 
+Esto es filtrar cosas.
+
+queremos lista intensional que reemplace cada número impar mayor que diez por “BANG!” y
+cada número impar menor que diez por “BOOM!”. Si un número no es impar, lo dejamos fuera de la lista
+
+esImpar Integer -> Bool
+esImpar x = mod x 2 == 0
+
+boomYbang [Integer] -> [String]
+boomYbang xs = [if x > 9 then "BANG!" else "BOOM!" |x <- xs, esImpar x]
+
+Y todo esto se puede hacer con multiples listas:
+
+ghci> [ x*y | x <- [2,5,10], y <- [8,10,11], x*y > 50]
+[55,80,100,110]
+
+longitud' xs = sumatoria [1| _ <- xs] --> Le metes una lista, esa lista es 
+evaluada a una lista con la misma cantidad de elementos pero todos siendo 1,
+entonces ahi hace la sumatoria de eso.
+
+removeNonUppercase st = [ c | c <- st, c `elem` ['A'..'Z']]
+Mata todas las mayusculas, le metes un texto, y va a devolver el 
+elemento actual si ese pertenece a la lista de mayusculas.
+
+Tuplas:
+Conjuntos de elementos que pueden ser de distintos tipos y tiene un tamaño 
+exacto, en el caso de que hagamos una lista de tuplas, todas las tuplas tienen 
+que tener el mismo tamaño y tipo de dato adentro, sino se consideraria otro tipo 
+de elemento.
+
+Qué triángulo recto cuyos lados miden enteros menores que 10 tienen un perímetro igual a 24?
+La solucion va a ser una lista de tuplas que la suma de 24:
+
+let allTriangulos = [ (a,b,c) | c <- [1..10] , b <- [1..c] , a <- [1..b]] 
+eso va al ghci como variable
+
+triangulosPerimetroDe :: [(Integer,Integer,Integer)] -> Integer -> [(Integer,Integer,Integer)]
+triangulosPerimetroDe xs y = [ (a,b,c) | (a,b,c) <- xs , a*a + b*b == c*c , a+b+c == y ]
+y esta funcion devuelve los triangulos que tienen ese perimetro 
+**PARA QUE SEAN TRIANGULOS RECTANGULOS HAY QUE DEFINIR LOS LIMITES COMO LO DICE ARRIBA.
