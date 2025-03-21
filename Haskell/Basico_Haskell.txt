@@ -14,6 +14,11 @@ el archivo actual.
 3. Ahora el archivo esta cargado y podes poner el nombre de la funcion que 
 quieras con sus respectivos argumentos, le das enter y se ejecuta.
 
+Transparencia referencial:
+Una vez declarado algo en Haskell no puede cambiarse, ser modificado ni nada, en toda 
+operacion con un elemento donde yo "agregue" o "elimine" un dato de el mismo, en realidad 
+se va a tratar de una copia nueva basada en la anterior, que si la llamamos sigue siendo la 
+misma, y la nueva otra.
 
 Operaciones basicas:
 +, *, -, / (division normal), && (and), || (or) y not (negacion)
@@ -291,4 +296,87 @@ eso va al ghci como variable
 triangulosPerimetroDe :: [(Integer,Integer,Integer)] -> Integer -> [(Integer,Integer,Integer)]
 triangulosPerimetroDe xs y = [ (a,b,c) | (a,b,c) <- xs , a*a + b*b == c*c , a+b+c == y ]
 y esta funcion devuelve los triangulos que tienen ese perimetro 
+**PARA QUE SEAN TRIANGULOS RECTANGULOS HAY QUE DEFINIR LOS LIMITES COMO LO DICE ARRIBA.
+
+Polimorfismo: no dependen del tipo sino del parametro, son funciones polimorficas en esos 
+casos, ej: algo :: a -> a, le metes un elemento del tipo a y te devuelve otro del mismo tipo,
+depende del param.
+
+Clausulas de definicion de tipos algebraicos: Empiezan con la palabra data y tienen la doble 
+funcion de definir el tipo y sus constructores, cada constructor da una alternativa distinta 
+para construir un elemento del tipo, ej:
+
+data Sensacion = Frio | Calor
+data Forma = Circ Float | Rect Float Float 
+
+El primero tiene 2 constructores sin parametros, por lo que el tipo Sensacion tiene solo 2 
+elementos, como el tipo Bool. El segundo tiene 2 constructores y cada uno tiene parametros, 
+que se separan en circulos y cuadrados.
+
+Patterns: Son expresiones del lenguaje formadas solamente por constructores o variables 
+(argumentos de los constructores) que no se repiten, Rect x y es un patron, pero 3 + x no,
+ni tampoco Rect x x, tiene una var repetida.
+
+Matching: Es una operacionb asociada a un patron, lo que hace es tomar una expresion cualquiera
+y ver si su valor coincide con el patron (quizas hace reduccion y otras cosas). Si la correspondencia
+existe, entonces liga las variables del patron a las subexpresiones correspondientes:
+
+circulo x = Circ (x + 1) -> Una funcion que usamos para el ej de abajo
+
+area :: Forma -> Float 
+area (Circ radio) = pi * radio^2
+area (Rect base altura) = base * altura
+
+En el lado izquierdo de las ecuaciones aparece la funcion que tamos definiendo aplicada a un pattern,
+(Cir radio y Rect base altura son patterns: un constructor aplicado a variables sin repetir).
+Despues si intetnamos evaluar area (circulo 2), el interperte debe elegir cual de las ecuaciones de area
+utilizar, primero evalua circulo 2 para saber que constructor corresponde, la reduccion da Circ (2+1), 
+ahora se puede verigicar cada ecuacion buscando matching, que lo encuentra con la variable radio que tiene 
+1 param.
+
+Funciones aceptadas de la materia:
+
+Funciones: foldr, foldl, foldr1, foldl1, map, zipWith, all, any, null, nub, sort, sortBy, mod, div, odd, even,
+(++), head, tail, init, last, length, replicate, repeat, iterate, filter, take, drop, elem, find, isNothing,
+isJust, fromJust, maybe, lookup, reverse, concat, union, intersect, (>>=), span, takeWhile, dropWhile, 
+concatMap, and, or, sum, max, maximum, maximumBy, min, minimum, minimumBy, (==), (/=), compare,
+comparing, not, ord, chr
+
+Arboles:  Puedo definir un arbol recursivamente asi:
+
+data Arbol a = Hoja a | Nodo a (Arbol a) (Arbol a)
+
+y puedo usarlo despues con lo que quiera:
+
+aej :: Arbol Int
+aej = Nodo 1 (Hoja 0) (Nodo 3 (Hoja 2) (Hoja 0))
+
+hojas :: Arbol a -> Int 
+hojas (Hoja x) = 1
+hojas (Nodo x i d) = hojas i + hojas d
+
+altura :: Arbol a -> Intaltura (Hoja x) = 0
+altura (Nodo x i d) = 1 + (altura i 'max' altura d) 
+
+cambiarPor2 :: Arbol Int -> Arbol Int
+cambiarPor2 (Hoja n) | n == 2 = Hoja 3
+cambiarPor2 (Hoja n) | otherwise = Hoja n 
+cambiarPor2 (Nodo x a b) = Nodo x (cambiarPor2 a) (cambiarPor2 b)
+
+Este de aca, usando la def de arbol de arriba, cambia solamente el valor de las hojas,
+si tiene el valor 2, lo cambia por 3, es lo unico que hace.
+
+Segun el caso, es importante saber en que orden estas recorriendo el arbol.
+
+inOrder :: Arbol a -> [a]
+inOrder (Hoja x) = [x]
+inOrder (Nodo x i d) = inOrder i ++ [x] ++ inOrder d
+
+preOrder :: Arbol a -> [a]
+preOrder (Hoja x) = [x] 
+preOrder (Nodo x i d) = x:(preOrder i ++ preOrder d)
+
+con los InOrder y preOrder podemos aplicar funciones a los elementos del arbol solo 
+manipulandolos como una lista.
+
 **PARA QUE SEAN TRIANGULOS RECTANGULOS HAY QUE DEFINIR LOS LIMITES COMO LO DICE ARRIBA.
