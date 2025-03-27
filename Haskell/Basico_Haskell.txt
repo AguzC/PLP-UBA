@@ -379,4 +379,110 @@ preOrder (Nodo x i d) = x:(preOrder i ++ preOrder d)
 con los InOrder y preOrder podemos aplicar funciones a los elementos del arbol solo 
 manipulandolos como una lista.
 
-**PARA QUE SEAN TRIANGULOS RECTANGULOS HAY QUE DEFINIR LOS LIMITES COMO LO DICE ARRIBA.
+
+Composicion de funciones:
+
+Se define "g . f" como:
+(.) :: (b -> c) -> (a -> b) -> a -> c
+(g . f) x = g (f x)
+
+Otra forma de definirla (usando la notaci´on “lambda”):
+(.) :: (b -> c) -> (a -> b) -> a -> c
+g . f = \ x -> g (f x)
+
+Funciones lambda (anonimas):
+Son funciones que podes escribir en el momento, en general se usan si es un caso unico y no 
+necesitas esa funcion en otro lado, no tiene nombre y se escriben asi:
+
+(\x -> x+2) , esta es la funcion que acepta un parametro y le suma 2, antes de la flecha podes 
+tener muchos parametros y despues de la flecha lo que se hace con ellos.
+(\x y -> x - y) -> Resta los 2 parametros que le metas
+Lo copado de esto es que te permite hacer funciones en el momento, y con eso podes pasarlas 
+como parametros a funciones de alto orden.
+
+Currificacion:
+Toda funcion que acepte mas de 1 parametro esta currificada, 
+ej:
+max 4 5, es lo mismo qeu (max 4) 5, primero se crea una funcion que toma un solo parametro,
+y devuelve 4 o el parametro, dependiendo de cual sea mayor, luego, 5 es aplicado a esa funcion 
+y esto nos da el resultado que queremos. 
+Poner un espacio entre 2 cosas es aplicar una funcion, este es algo asi como un operador 
+y tiene la maxima preferencia, en el caso del tipo max, el tipo es:
+max :: (Ord a) => a -> a -> a, que asi no mas lees que le metes 2 param y da otro del mismo tipo,
+max tambien se puede escribir de la siguiente forma:
+max :: (Ord a) => a -> (a -> a) , lo cual se lee como "max toma un a y devuelve una funcion que 
+toma un a y devuelve un a", de aca sale el hecho de que los parametros y el resultado esten 
+separados por flechas.
+
+Teniendo esto en cuenta, podemos tener funciones que llamamos con menos parametros de los que 
+necesita, que se llama funcion parcialmente aplicada, asiq podemos crear funciones que podemos
+pasarlas como parametros a otras funciones.
+
+compareWithHundred :: (Num a, Ord a) => a -> Ordering
+compareWithHundred x = compare 100 x
+
+compareWithHundred2 :: (Num a, Ord a) => a -> Ordering
+compareWithHundred2 = compare 100
+
+En este caso, ambas son la misma funcion, se peude definir como la de arriba que conocemos, o como 
+la de abajo, ya que el resultado de compare 100 es una funcion que compara 100 con algo, compare 
+tiene el tipo (Ord a) => a -> (a -> Ordering), llamarlo con 100 devuelve (Num a, Ord a) => a -> Ordering.
+
+Las funciones infijas tambien pueden ser aplicadas parcialmente usando secciones, se rodea con parentesis 
+y se suministra un solo parametro a un lado, eso crea una funcion que toma un parametro y lo aplica en el 
+lado que falta un operando:
+
+divideByTen :: (Floating a) => a -> a
+divideByTen = (/10)
+
+LLamar divideByTen 200 = 200/10 o (/10) 200
+para que quede claro, si haces (/10) 200 en la terminal, te devuelve 200/10, y lo mismo con cualquier operacion 
+que hagas, es el equivalente a hacer foo param1 param2 = (foo param1) param2, son funciones.
+
+Funcions de orden superior:
+Son funciones que pueden tomar funciones como parametros o devolverlas. ej:
+
+applyTwice :: (a -> a) -> a -> a
+applyTwice f x = f (f x)
+
+Usa parentesis para indicar que el primer parametro es una funcion que toma un a y devuelve un a del mismo tipo,
+el segundo param es de ese mismo tipo, se puede decir que toma 2 parametros y devuelve una sola cosa.
+
+ghci> applyTwice (+3) 10
+16
+ghci> applyTwice (++ " HAHA") "HEY"
+"HEY HAHA HAHA"
+ghci> applyTwice ("HAHA " ++) "HEY"
+"HAHA HAHA HEY"
+ghci> applyTwice (multThree 2 2) 9
+144
+ghci> applyTwice (3:) [1]
+[3,3,1]
+
+
+zipWith: Toma una funcion y 2 listas, y las unes aplicando la funcion entre los parametros 
+correspondientes. La implementacion seria esta: (esta en el preludio)
+
+zipWith' :: (a -> b -> c) -> [a] -> [b] -> [c]
+zipWith' _ [] _ = [] --> Caso base normal
+zipWith' _ _ [] = [] --> Caso base normal
+zipWith' f (x:xs) (y:ys) = f x y : zipWith' f xs ys --> Aca toma la funcion, se la aplica al
+primer elemento de ambas listas y ese nuevo elemento lo concatena y asi sigue.
+
+flip: Toma una funcion y devuelve una funcion igual pero con los 2 primeros parametros
+invertidos.
+
+map: Toma una funcion y una lista para aplicar esa funcion a cada elemento de la lista y produciendo 
+una nueva:
+
+map :: (a -> b) -> [a] -> [b]
+map _ [] = []
+map f (x:xs) = f x : map f xs
+
+filter: Es una funcion qeu toma un predicado y una lista y devuelve la lista con los elementos que sean cumplan.
+
+filter :: (a -> Bool) -> [a] -> [a]
+filter _ [] = []
+filter p (x:xs)
+    | p x       = x : filter p xs
+    | otherwise = filter p xs
