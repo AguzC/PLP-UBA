@@ -123,3 +123,90 @@ foldr f z xs = f x1 (f x2 (f x3 z))
 Equivalentemente con notaci´on infija:
 foldr ⋆ z xs = x1 ⋆ (x2 ⋆ (x3 ⋆ z))
 -}
+
+
+
+entrelazar1 :: [a] -> ([a] -> [a])
+entrelazar1 = foldr (\x rec ys -> 
+                    if null ys
+                    then x : rec [] --Rec es una funcion de 3 param...?
+                    else x : (head ys) : rec (tail ys)
+                    ) id  
+
+
+--6
+
+sacarUna :: Eq a => a -> [a] -> [a]
+sacarUna e = recr (\x xs rec ->
+                       if x == e 
+                       then xs
+                       else x : rec ) [] 
+
+
+
+--6 c
+
+insertarOrdenado :: Ord a => a -> [a] -> [a]
+insertarOrdenado e = recr (\x xs rec -> 
+                           if  e > x 
+                           then x : rec 
+                           else e : x : xs) [e]
+
+
+--7a
+
+mapPares :: 
+
+
+
+
+
+recr :: (a -> [a] -> b -> b) -> b -> [a] -> b
+recr _ z [] = z
+recr f z (x : xs) = f x xs (recr f z xs)
+
+main :: IO ()
+main = print (insertarOrdenado 1 [1,2,4,5,6,7])
+
+                    
+            
+                    {-
+foldr :: (a -> b -> b) -> b -> [a] -> b
+foldr z [] = z
+foldr f z (x:xs) = f x (foldr f z xs)
+
+Si xs = [x1, x2, x3] entonces:
+foldr f z xs = f x1 (f x2 (f x3 z))
+
+Equivalentemente con notaci´on infija:
+foldr ⋆ z xs = x1 ⋆ (x2 ⋆ (x3 ⋆ z))
+
+foldr f z (x:xs) = f x (foldr f z xs)
+
+foo x (rec ys) 
+
+
+
+
+-}
+
+
+
+
+
+
+
+--foldr (a -> b -> b) -> [a] -> b
+
+{-
+foldr :: (a -> b -> b) -> b -> [a] -> b
+foldr z [] = z
+foldr f z (x:xs) = f x (foldr f z xs)
+
+Si xs = [x1, x2, x3] entonces:
+foldr f z xs = f x1 (f x2 (f x3 z))
+
+Equivalentemente con notaci´on infija:
+foldr ⋆ z xs = x1 ⋆ (x2 ⋆ (x3 ⋆ z))
+-}
+
