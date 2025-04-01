@@ -210,3 +210,5 @@ Equivalentemente con notaci´on infija:
 foldr ⋆ z xs = x1 ⋆ (x2 ⋆ (x3 ⋆ z))
 -}
 
+mapPares :: (a -> c -> b) -> [(a,c)] -> [b]
+
