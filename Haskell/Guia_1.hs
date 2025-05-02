@@ -1,4 +1,6 @@
 {-# OPTIONS_GHC -Wno-x-partial #-}
+import Data.List (nub)
+
 
 --3.
 --I. Redefinir usando foldr las funciones sum, elem, (++), filter y map.
@@ -482,6 +484,10 @@ distancias = foldRT (\_ recHijos ->
         (x:xs) -> map (+1) (concat recHijos))
 
 
+union :: (Eq a) => [a] -> [a] -> [a]
+union xs ys = nub (xs ++ ys)
+
+
 --15.c.3
 {- altura, que devuelve la altura de un RoseTree (la cantidad de nodos de la rama más larga). Si el
 RoseTree es una hoja, se considera que su altura es 1. -}
@@ -564,7 +570,6 @@ contenido:: Int -> Buffer a -> Maybe a --Leelo en otro momento a ver que onda.
 contenido pos = foldBuff Nothing (\int v recBuff -> if int == pos then Just v else recBuff)
                                  (\int recBuff   -> if int == pos then Nothing else recBuff)
 
-
 --d.
 
 {- Definir la función puedeCompletarLecturas::Buffer a -> Bool, que indique si todas las lecturas
@@ -596,17 +601,142 @@ deshacer = recBuff (const Empty) (\i v buff recBuff n -> if n == 0 then (Write i
                                  (\i buff recBuff n -> if n == 0 then (Read i buff) else recBuff (n-1))
 
 
-{- recBuff:: b -> (Int -> a -> Buffer a -> b -> b) -> (Int -> Buffer a -> b -> b) -> Buffer a -> b
-recBuff fEmpty fWrite fRead buff =
-    case buff of 
-        Empty       -> fEmpty
-        Write i a x -> fWrite i a x (rec x)
-        Read i x    -> fRead i x (rec x)  
-    where rec = recBuff fEmpty fWrite fRead -}
+-- Primer parcial primer cuatri 2024, programacion funcional
+--El siguiente tipo de datos sirve para representar árboles ternarios:
+
+data AT a = NilT | Tri a (AT a) (AT a) (AT a)
+
+{- Definimos el siguiente árbol para los ejemplos:
+at1 = Tri 1 (Tri 2 NilT NilT NilT) (Tri 3 (Tri 4 NilT NilT NilT) NilT NilT)
+(Tri 5 NilT NilT NilT) -}
+
+
+--a. Dar el tipo y definir la función foldAT que implementa el esquema de recursión estructural para el tipo
+--AT a. Sólo en este inciso se permite usar recursión explícita.
+
+foldAT :: b -> (a -> b -> b -> b -> b) -> AT a -> b
+foldAT fNil fTri ab =
+    case ab of
+        NilT        -> fNil
+        Tri x a b c -> fTri x (rec a) (rec b) (rec c)
+    where rec = foldAT fNil fTri  
+
+
+{- 
+b. Definir la función preorder :: AT a -> [a], que lista los nodos de un árbol ternario en el orden en
+que aparecen: primero la raíz, después los nodos del subárbol izquierdo, luego los del medio y finalmente
+los del derecho.
+Por ejemplo: preorder at1 [1, 2, 3, 4, 5]. -}
+
+preOrder :: AT a -> [a]
+preOrder = foldAT [] (\r i m d -> [r] ++ i ++ m ++ d)
+
+{- 
+c. Definir la función mapAT :: (a -> b) -> AT a -> AT b, análoga a la función map para listas, pero
+para árboles ternarios.
+
+Por ejemplo: mapAT (+1) at1 = Tri 2 (Tri 3 NilT NilT NilT) (Tri 4 (Tri 5 NilT NilT) Nill
+NilT) (Tri 6 NilT NilT NilT) -}
+
+mapAT :: (a -> b) -> AT a -> AT b
+mapAT f = foldAT NilT (\r i m d -> Tri (f r) i m d)
+
+{- 
+d. Definir la función nivel :: AT a -> Int -> [a], que devuelve la lista de nodos 
+del nivel correspondiente del árbol, siendo 0 el nivel de la raíz.
+Por ejemplo: nivel at1 1 [2, 3, 5]. -}
+
+nivel :: AT a -> Int -> [a]
+nivel = foldAT (const []) (\r i m d -> \n -> if n == 0 then [r] else (i (n-1)) ++ (m (n-1)) ++ (d (n-1)))
+
+
+--Primer parcial primer cuatri 2024, programacion funcional
+
+{- 
+En este ejercicio vamos a modelar lógica proposicional en Haskell, de modo de poder construir fórmulas
+proposicionales y evaluarlas bajo distintas valuaciones. -}
+
+data Prop = Var String | No Prop | Y Prop Prop | O Prop Prop | Imp Prop Prop
+    deriving (Show)
+
+type Valuacion = String -> Bool
+
+{- 
+Por ejemplo, la expresión: Y (Var "P?) (No (Imp (Var 'Q'') (Var "R''))) representa la proposición 
+P y no ( Q -> R).
+
+Las valuaciones se representan como funciones que a cada variable proposicional le asignan un valor booleano. 
+Por ejemplo la valuación \x -> x == 'p' le asigna el valor verdadero a la variable P y falso a todas las
+otras variables proposicionales.
+
+a.Dar el tipo y definir las funciones foldProp y recProp, que implementan respectivamente los esquemas
+de recursión estructural y primitiva para el tipo Prop. Solo en este inciso se permite usar recursión explícita.
+ -}
+
+foldProp :: (String -> b) -> (b -> b) -> (b -> b -> b) -> (b -> b -> b) -> (b -> b -> b) -> Prop -> b
+foldProp fVar fNot fAnd fOr fImp prop =
+    case prop of 
+        Var s   -> fVar s
+        No x    -> fNot (rec x)
+        Y x y   -> fAnd (rec x) (rec y)
+        O x y   -> fOr (rec x) (rec y)
+        Imp x y -> fImp (rec x) (rec y)
+    where rec = foldProp fVar fNot fAnd fOr fImp
+
+
+recProp :: (String -> b) -> (Prop -> b -> b) -> (Prop -> Prop -> b -> b -> b) -> (Prop -> Prop -> b -> b -> b) -> (Prop -> Prop -> b -> b -> b) -> Prop -> b
+recProp fVar fNot fAnd fOr fImp prop =
+    case prop of 
+        Var s   -> fVar s
+        No x    -> fNot x (rec x)
+        Y x y   -> fAnd x y (rec x) (rec y)
+        O x y   -> fOr x y (rec x) (rec y)
+        Imp x y -> fImp x y (rec x) (rec y)
+    where rec = recProp fVar fNot fAnd fOr fImp
+
+{- 
+b.Definir la función variables :: Prop -> [String], que dada una fórmula devuelve la lista con todas
+sus variables proposicionales en algún orden, sin elementos repetidos. -}
+
+variables :: Prop -> [String]
+variables = foldProp (\s -> [s]) 
+                     (\x -> x) 
+                     (\x y -> union x y) 
+                     (\x y -> union x y)
+                     (\x y -> union x y)
+
+
+{- 
+Definir la función evaluar :: Valuación -> Prop -> Bool, que indica si una fórmula es verdadera o
+falsa para una valuación dada. -}
+
+evaluar1 :: Valuacion -> Prop -> Bool
+evaluar1  v = foldProp (\s -> v s) (\x -> not x) (\x y -> x && y) (\x y -> x || y) (\x y -> (not x) || y)
+
+{- 
+d. Definir la función estáEnFNN :: Prop -> Bool, que indica si una fórmula está en Forma Normal Negada.
+Es decir, si no tiene implicaciones y la negación se aplica únicamente a variables y no a proposiciones más complejas.
+Por ejemplo: Y (Var "P'") (No (Imp (Var "Q'") (Var "R*'))) no está en FNN,
+y en cambio Y (Var ''P'') (Y (Var 'Q'') (No (Var ''R'"))) sí lo está. -}
+
+--FNN <-> NO HAY "-->" y LA NEGACION SOLO TA SOBRE VARIABLES, NO ALGUNA PROP.
+
+estaEnFNN :: Prop -> Bool
+estaEnFNN = recProp (const True) 
+                    (\prop x -> case prop of
+                        Var _   -> True 
+                        No _    -> False
+                        Y _ _   -> False 
+                        O _ _   -> False 
+                        Imp _ _ -> False) 
+                    (\prop1 prop2 x y -> x && y) 
+                    (\prop1 prop2 x y -> x && y) 
+                    (\prop1 prop2 x y -> False)
 
 
 
-    
+
+
 {- (<+>) :: Doc -> Doc -> Doc
 d1 <+> d2 = foldDoc d2 foo Linea d1
 
@@ -618,10 +748,3 @@ d1 <+> d2 = foldDoc d2 foo Linea d1
 indentar :: Int -> Doc -> Doc
 indentar i = foldDoc Vacio Texto (\i' -> Linea (i + i'))
  -}
-
-
-{-
-Hay que comparar los elementos y quedarse con el 
-mejor segun f, tendiendo r , i y d
-
--}
