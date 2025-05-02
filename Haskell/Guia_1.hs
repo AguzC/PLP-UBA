@@ -1,3 +1,5 @@
+{-# OPTIONS_GHC -Wno-x-partial #-}
+
 --3.
 --I. Redefinir usando foldr las funciones sum, elem, (++), filter y map.
 
@@ -26,8 +28,12 @@ filterFoldr :: (a -> Bool) -> [a] -> [a]
 filterFoldr p = foldr (\x rec -> if p x then x : rec else rec) []
 
 mapFoldr :: (a -> b) -> [a] -> [b]
---mapFoldr f = foldr (\x rec -> f x : rec) []
+--mapFoldr f xs = foldr (\x rec -> f x : rec) [] xs
 mapFoldr f = foldr ((:).f) []
+
+map' :: (a -> b) -> [a] -> [b]
+map' f [] = []
+map' f (x:xs) = f x : map' f xs
 
 --II.
 --Definir la función mejorSegún :: (a -> a -> Bool) -> [a] -> a, que devuelve el máximo elemento
@@ -156,7 +162,7 @@ entrelazar1 = foldr (\x rec ys ->
                     ) (const []) 
 
 
---6
+--6 a
 
 sacarUna :: Eq a => a -> [a] -> [a]
 sacarUna e = recr (\x xs rec ->
@@ -186,7 +192,7 @@ mapPares f xs = foldr (\x rec -> uncurry f x : rec) [] xs
 
 --7b
 
-armarPares:: [a] -> ([b] -> [(a,b)])
+armarPares:: [a] -> [b] -> [(a,b)]
 armarPares = foldr (\x rec ys ->
                           if null ys
                           then []
@@ -294,7 +300,7 @@ data Polinomio a = X
     | Cte a 
     | Suma (Polinomio a) (Polinomio a) 
     | Prod (Polinomio a) (Polinomio a)
-
+    deriving (Show)
 
 foldPoli:: b -> (a -> b) -> (b -> b -> b) -> (b -> b -> b) -> Polinomio a -> b
 foldPoli fx fcte fsuma fprod poli =
@@ -310,7 +316,8 @@ evaluar a = foldPoli a id (+) (*)
 
 --12a.
 
-data AB a = Nil | Bin (AB a) a (AB a)
+data AB a = Nil | Bin (AB a) a (AB a) 
+    deriving (Show)
 
 foldAB :: b -> (b -> a -> b -> b) -> AB a -> b
 foldAB fNil fBin ab =
@@ -343,11 +350,274 @@ cantNodos = foldAB 0 (\d r i -> 1 + d + i)
 
 --12c.
 
-mejorSegun :: (a -> a -> Bool) -> AB a -> a
-mejorSegun f = foldAB () (\d r i -> f r ) 
+--Definir la función mejorSegún :: (a -> a -> Bool) -> AB a -> a, análoga a la del ejercicio 3, para árboles.
+--Se recomienda definir una función auxiliar para comparar la raíz con un posible resultado de la recursión
+--para un árbol que puede o no ser Nil.
+
+mejorSegun1 :: (a -> a -> Bool) -> AB a -> a
+mejorSegun1 pred (Bin izq r der) = foldAB r (\i r d -> if pred d r then (if pred d i then d else i) else (if pred r i then r else i)) (Bin izq r der)
+ 
+
+--12.d 
+{- Definir la función esABB :: Ord a => AB a -> Bool que chequea si un árbol es un árbol binario de búsqueda.
+Recordar que, en un árbol binario de búsqueda, el valor de un nodo es mayor o igual que los valores que
+aparecen en el subárbol izquierdo y es estrictamente menor que los valores que aparecen en el subárbol
+derecho. -}
+
+esABB :: Ord a => AB a -> Bool
+esABB (Bin i r d) = recAB True (\i r d recI recD -> (mayor r i) && (menor r d) && recI && recD) (Bin i r d)
+    where mayor _ Nil = True
+          mayor x ab  = x >= mejorSegun1 (>) ab
+          menor _ Nil = True
+          menor x ab  = x <  mejorSegun1 (<) ab
 
 
-ignorarNil :: AB a -> 
+
+
+--13.a 
+
+--i. Definir las funciones ramas (caminos desde la raíz hasta las hojas), cantHojas y espejo.
+
+ramas:: AB a -> [[a]]
+ramas= foldAB [] (\recI r recD -> if null recI && null recD then [[r]] else map (r:) (recI ++ recD))
+{- Si llega a un Nil, devuelve la lista vacia, y el otro lado tmabien, tenes un nodo sin hijos, 
+devuelvel el valor del nodo como [[r]], si solo uno de los 2 es Nil, tonces concatena [] con el
+resultado que llegue, [] ++ xs = xs, asiq lo deja igual, y despues a todo lo que tenga xs le agrega 
+la raiz actual. Si tenes 2 hijos con cosas, vas a tener algo como [[x]] y [[y]], asiq primero queres 
+unificarlos en una lista, [[x]] ++ [[y]] = [[x],[y]], y despues le agregas el elemento actual de tu 
+raiz, asi va subiendo la rama, map (r:) ([[x]] ++ [[y]]) = map (r:) ([[x],[y]]) que tonces queda 
+=  [[r,x],[r,y]], es una maravilla. Puntos claves, ver como el foldAB empieza al final y va subiendo,
+lo que te permite concatenar las listas y cuando haces el map (r:), se lo tas haciendo a todas las 
+listas que son ramas de ese mismo nodo. Tambien el if Null, porq sino, cuando llega a Nil, solo 
+devuelve muchas listas vacias y nunca agregas nada a la lista, map (r:) ([] ++ [] = []) = [], y
+map f [] = [].
+-}
+
+
+cantHojas:: AB a -> Int
+cantHojas = foldAB 0 (\recI r recD -> if (recI == 0 && recD == 0) then 1 else recI + recD)
+
+espejo:: AB a -> AB a
+espejo = foldAB Nil (\recI r recD -> Bin recD r recI)
+--Pretty magico
+
+--13.b
+{- Definir la función mismaEstructura :: AB a -> AB b -> Bool que, dados dos árboles, indica si éstos
+tienen la misma forma, independientemente del contenido de sus nodos. Pista: usar evaluación parcial y
+recordar el ejercicio 7. -}
+
+
+mismoArbol :: (Eq a) => AB a -> AB a -> Bool
+mismoArbol = recAB (const True) (\i r d recI recD abb -> case abb of 
+                                     Nil        -> esNil (Bin i r d)
+                                     Bin i rr d -> (rr == r) && (recI i) && (recD d)
+                              ) 
+                            
+-- Soy un falopero que no lee el enunciado, no habia que ver si son iguales, habia que ver que tengan 
+-- la misma forma en ramas y eso.... miss Morbol, sameree
+
+mismaEstructura :: AB a -> AB b -> Bool
+mismaEstructura = recAB (const True) (\i r d recI recD abb -> case abb of 
+                                     Nil        -> False -- Este es "arbol A tiene rama aca pero B no"
+                                     Bin i _ d  -> (recI i) && (recD d)
+                              ) 
+-- Extra: No tiene necesidad de ser un recAB, solo que me daba pereza cambiarlo.
+
+--14.a
+--Se desea modelar en Haskell los árboles con información en las hojas (y sólo en ellas). Para esto introduciremos
+--el siguiente tipo:
+
+data AIH a = Hoja a | Bin1 (AIH a) (AIH a)
+    deriving (Show)
+
+{- Definir el esquema de recursión estructural foldAIH y dar su tipo. Por tratarse del primer esquema de
+recursión que tenemos para este tipo, se permite usar recursión explícita -}
+
+foldAIH:: (a -> b) -> (b -> b -> b) -> AIH a -> b
+foldAIH fHoja fBin1 ab = 
+    case ab of
+        Hoja a   -> fHoja a
+        Bin1 i d -> fBin1 (rec i) (rec d)
+    where rec = foldAIH fHoja fBin1 
+
+--14.b
+
+{- Escribir las funciones altura :: AIH a -> Integer y tamaño :: AIH a -> Integer.
+Considerar que la altura de una hoja es 1 y el tamaño de un AIH es su cantidad de hojas.
+ -}
+
+alturaAIH :: AIH a -> Integer -- Longitud camino mas largo hasta una hoja
+alturaAIH = foldAIH (\a -> 1) (\recI recD -> 1 + max recI recD)
+
+tamañoAIH :: AIH a -> Integer -- Cantidad de hojas
+tamañoAIH = foldAIH (const 1) (\recI recD -> recI + recD)
+
+
+--15.a
+
+data RoseTree a = RoseTree a [RoseTree a] 
+    deriving (Show)
+
+--15.b
+
+foldRT:: (a -> [b] -> b) -> RoseTree a -> b
+foldRT fRT (RoseTree x xs) = fRT x (map (foldRT fRT) xs)
+
+--15.c.1
+
+hojasRT:: RoseTree a -> [a]
+hojasRT = foldRT (\v recHijos -> 
+    case recHijos of
+        []     -> [v] -- Sino tiene hijos, lo meto en una lista
+        (x:xs) -> concat recHijos) -- Concat, dada muchas listas en una lista, concatena todo en una sola
+                                   -- concat [[1, 2, 3], [4, 5], [6], []] --> [1,2,3,4,5,6]
+
+--15.c.2
+-- distancias, que dado un RoseTree, devuelva las distancias de su raíz a cada una de sus hojas.
+
+distancias:: RoseTree a -> [Integer]
+distancias = foldRT (\_ recHijos -> 
+    case recHijos of
+        []     -> [1]
+        (x:xs) -> map (+1) (concat recHijos))
+
+
+--15.c.3
+{- altura, que devuelve la altura de un RoseTree (la cantidad de nodos de la rama más larga). Si el
+RoseTree es una hoja, se considera que su altura es 1. -}
+
+alturaRT:: RoseTree a -> Integer
+alturaRT rs = maximum (distancias rs) -- Se siente tramposo(?)
+
+
+-- Primer parcial segundo cuatri 2024, programacion funcional
+{- Aclaración: en este ejercicio no está permitido utilizar recursión explícita, a menos que se indique lo contrario.
+
+El siguiente tipo de datos sirve para representar un buffer con historia que permite escribir o leer en
+cualquiera de sus posiciones (las posiciones tienen tipo Int). 
+-El tipo del buffer es paramétrico en el tipo de los contenidos que se pueden guardar en él.
+-Si se escribe dos veces en la misma posición, el nuevo contenido pisa al anterior (por simplicidad). 
+-La lectura elimina el contenido leído. -}
+{-
+Por ejemplo, los buffers 
+-b1 = Write 2 True Empty 
+-b2 = Write 2 True (Write 2 False Empty) y
+-b3 = Read 1 (Write 2 True (Write i False Empty))
+tienen todos el valor True en la posición 2 y nada en las demás,
+aunque tienen distinta historia y podrían distinguirse mirando el historial de operaciones realizadas.
+
+Parece segun el b2 que la historia es ultima accion (accion anterior qcy), se lee de adentro hacia 
+afuera pa la cronologia. 
+
+b2 = Write 2 True (Write 2 False Empty)
+b2 = [vacio,vacio,..] -> Write 2 False -> [vacio,False,..] -> Write 2 True -> [vacio,True,..]
+
+Y importante que la lectura elimina el contenido:
+b3 = Read 1 (Write 2 True (Write 1 False Empty))
+b3 = [vacio,vacio,..] -> Write 1 False -> [False,vacio,..] -> Write 2 True -> [False,True,..] -> Read 1 -> [vacio,True,..] 
+
+-}
+
+data Buffer a = Empty | Write Int a (Buffer a) | Read Int (Buffer a)
+    deriving (Show)
+--a. Dar el tipo y definir la función foldBuffer y recBuffer, que implementan respectivamente 
+-- los es- quemas de recursión estructural y primitiva para el tipo Buffer a. 
+-- Solo en este inciso se permite usar recursión explícita.
+
+foldBuff:: b -> (Int -> a -> b -> b) -> (Int -> b -> b) -> Buffer a -> b
+foldBuff fEmpty fWrite fRead buff =
+    case buff of 
+        Empty       -> fEmpty
+        Write i a x -> fWrite i a (rec x)
+        Read i x    -> fRead i (rec x)  
+    where rec = foldBuff fEmpty fWrite fRead
+
+recBuff:: b -> (Int -> a -> Buffer a -> b -> b) -> (Int -> Buffer a -> b -> b) -> Buffer a -> b
+recBuff fEmpty fWrite fRead buff =
+    case buff of 
+        Empty       -> fEmpty
+        Write i a x -> fWrite i a x (rec x)
+        Read i x    -> fRead i x (rec x)  
+    where rec = recBuff fEmpty fWrite fRead
+
+--b.
+{- Definir la función posiciones cupadas:: Buffer a -> [Int], que lista las posiciones ocupadas en
+un buffer (sin posiciones repetidas).
+Por ejemplo: posicionesOcupadas buf [1, 2]. -}
+
+posicionesOcupadas :: Buffer a -> [Int] 
+posicionesOcupadas = foldBuff [] (\i _ recBuff -> if elem i recBuff
+                                                  then recBuff
+                                                  else i : recBuff) 
+                                 (\i recBuff -> filter (i /=) recBuff) 
+
+--c.
+{- Definir la función contenido:: Int -> Buffer a -> Maybe a, que devuelva el contenido de una posición en
+un buffer si hay algo en ella, y Nothing en caso contrario.
+buf = Write 1 'a' $ Write 2 'b' $ Write 1 'c' $ Empty
+contenido 1 buf          --> Just a
+contenido (-2) buf       --> Nothing.
+contenido 1 (Read 1 buf) --> Nothing.
+-}
+
+contenido:: Int -> Buffer a -> Maybe a --Leelo en otro momento a ver que onda.
+contenido pos = foldBuff Nothing (\int v recBuff -> if int == pos then Just v else recBuff)
+                                 (\int recBuff   -> if int == pos then Nothing else recBuff)
+
+
+--d.
+
+{- Definir la función puedeCompletarLecturas::Buffer a -> Bool, que indique si todas las lecturas
+pueden completarse exitosamente (es decir, si cada vez que se intenta leer una posición, hay algo
+escrito en ella).
+Por ejemplo:
+
+puedeCompletarLecturas (Read 1 Empty)        --> False.
+puedeCompletarLecturas (Read 1 buf)          --> True.
+puedeCompletarLecturas (Read 1 $ Read 1 buf) --> False.
+ -}
+
+puedeCompletarLecturas :: Buffer a -> Bool
+puedeCompletarLecturas = recBuff True (\i v buff recBuff -> recBuff) 
+                                      (\i buff recBuff -> elem i (posicionesOcupadas buff) && recBuff)
+
+
+--e.
+{- Definir la función deshacer::Buffer a -> Int -> Buffer a, que dados un buffer y un número
+natural n (es decir, un Int que por contexto de uso no es negativo), deshaga las últimas n operaciones
+del buffer, sacando los n constructores más externos para obtener un buffer como el original antes de
+realizar dichas operaciones. Si se realizaron menos de n operaciones, el resultado debe quedar vacío.
+
+Por ejemplo: deshacer 2 buf Write 1 ''c'" Empty. 
+-}
+
+deshacer::Buffer a -> Int -> Buffer a -- Leelo en otro momento.
+deshacer = recBuff (const Empty) (\i v buff recBuff n -> if n == 0 then (Write i v buff) else recBuff (n-1)) 
+                                 (\i buff recBuff n -> if n == 0 then (Read i buff) else recBuff (n-1))
+
+
+{- recBuff:: b -> (Int -> a -> Buffer a -> b -> b) -> (Int -> Buffer a -> b -> b) -> Buffer a -> b
+recBuff fEmpty fWrite fRead buff =
+    case buff of 
+        Empty       -> fEmpty
+        Write i a x -> fWrite i a x (rec x)
+        Read i x    -> fRead i x (rec x)  
+    where rec = recBuff fEmpty fWrite fRead -}
+
+
+
+    
+{- (<+>) :: Doc -> Doc -> Doc
+d1 <+> d2 = foldDoc d2 foo Linea d1
+
+    where foo = ( \t rec -> case rec of
+    Texto t' d -> Texto (t ++ t') d
+    _ -> Texto t rec
+)
+
+indentar :: Int -> Doc -> Doc
+indentar i = foldDoc Vacio Texto (\i' -> Linea (i + i'))
+ -}
 
 
 {-
